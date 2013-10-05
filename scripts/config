@@ -1,0 +1,39 @@
+#! /bin/bash
+
+set -e
+set -x
+
+if [ -e $HOME/config.site ]; then
+  source $HOME/config.site
+else
+  source ./config.site
+fi
+
+k="./keys"
+root_pfx="$k/kcn-root"
+root_key="$root_pfx.key"
+root_csr="$root_pfx.csr"
+root_crt="$root_pfx.crt"
+
+
+aws_pfx="$k/zed-server"
+aws_key="$aws_pfx.key"
+aws_csr="$aws_pfx.csr"
+aws_crt="$aws_pfx.crt"
+aws_pem="$aws_pfx.pem"
+
+# cli_name must be defined in caller script!
+cli_dir="$k/zed-clients"
+cli_pfx="$cli_dir/$cli_name"
+cli_key="$cli_pfx.key"
+cli_csr="$cli_pfx.csr"
+cli_crt="$cli_pfx.crt"
+cli_p12="$cli_pfx.p12"
+if [ "x$cli_pass" = "x" ]; then
+  cli_pass="pass:Passw0rd"
+fi
+
+subj_common="/C=$p_C/ST=$p_ST/L=$p_L/O=$p_O"
+subj_ca="$subj_common/OU=$p_RootOU/CN=$p_RootFDQN/"
+subj_srv="$subj_common/OU=$p_SrvOU/CN=$p_SrvFDQN/"
+subj_cli="$subj_common/OU=$p_SrvOU/CN=$cli_name/"

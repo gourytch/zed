@@ -1,0 +1,15 @@
+#! /bin/bash
+
+p_C="RU"
+p_ST="Chelyabinskaya obl."
+p_L="Chelyabinsk"
+p_O="ZeroOrg"
+p_RootOU="Main CA"
+p_RootFDQN="localhost"
+p_SrvOU="Private Server"
+p_SrvFDQN="localhost"
+
+cli_pass="pass:12345"
+
+days=$[365 * 1]
+len=1024
