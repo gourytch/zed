@@ -10,7 +10,7 @@ else
 fi
 
 k="./keys"
-root_pfx="$k/kcn-root"
+root_pfx="$k/root-ca"
 root_key="$root_pfx.key"
 root_csr="$root_pfx.csr"
 root_crt="$root_pfx.crt"
