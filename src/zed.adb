@@ -2,85 +2,120 @@ with Ada.Text_IO;
 with AWS.Config;
 with AWS.Default;
 with AWS.Server;
+with AWS.Log;
 
-with AWS.Response;
-with AWS.Status;
-with AWS.Messages;
-with AWS.MIME;
+with AWS.Net.SSL;
+with AWS.Net.SSL.Certificate;
+with Verification;
 
+with Main_Log;
 with Handlers;
-with Page_Not_Found;
+
+with res;
 
 procedure Zed is
-   Web_Server : AWS.Server.HTTP;
-   Server_Config : constant AWS.Config.Object := AWS.Config.Get_Current;
    use Ada.Text_IO;
    use AWS.Config;
 
-   procedure Show_Config is
-      Config : constant AWS.Config.Object := AWS.Server.Config(Web_Server);
+   Server_Config : AWS.Config.Object := Get_Current;
+   Actual_Config : AWS.Config.Object;
+
+   Server_CRT_Filename : constant String := "./keys/zed.crt";
+   Server_Key_Filename : constant String := "./keys/zed.key";
+   Trusted_CA_Filename : constant String := "./keys/ca.crt";
+   CRL_Filename        : constant String := "./keys/crl.pem";
+
+   SSL : AWS.Net.SSL.Config;
+   Web_Server : AWS.Server.HTTP;
+
+   procedure Prepare_SSL is
    begin
-      Put_Line ("Server Host: " & Server_Host (Config));
-      Put_Line ("Server Port: " & Natural'Image (Server_Port (Config)));
-      if Session (Config) then
-         Put_Line ("with session support");
-      else
-         Put_Line ("without session support");
-      end if;
+      Put_Line ("* initialize embedded resources ...");
+      res.Init;
 
-      if Security (Config) then
-         Put_Line ("use secured connection");
-      else
-         Put_Line ("use insecured connection");
-      end if;
-   end Show_Config;
+      Put_Line ("* configure security layer ...");
+
+      AWS.Net.SSL.Initialize
+        (SSL,
+         Certificate_Filename => Server_CRT_Filename,
+         Key_Filename => Server_Key_Filename,
+         Exchange_Certificate => True,
+         Certificate_Required => True,
+         Trusted_CA_Filename => Trusted_CA_Filename,
+         CRL_Filename => CRL_Filename);
+
+      AWS.Net.SSL.Certificate.Set_Verify_Callback (SSL, Verification.Callback);
+      AWS.Server.Set_SSL_Config (Web_Server, SSL);
+   end Prepare_SSL;
 
 
-   procedure Perform_Good_Start is
+   procedure Start_Server is
    begin
-
+      Put_Line ("* server starting ...");
       AWS.Server.Start (Web_Server => Web_Server,
                         Dispatcher => Handlers.Get_Dispatcher,
                         Config     => Server_Config);
-   end Perform_Good_Start;
+   end Start_Server;
 
-   procedure Perform_HardCoded_Start is
-   function Callback
-     (Request : in AWS.Status.Data)
-      return AWS.Response.Data
-   is
-      Resource : constant String := AWS.Status.URI (Request);
+
+   function Check_Config return Boolean is
    begin
-      return AWS.Response.Build
-        (Status_Code => AWS.Messages.S200,
-         Content_Type => AWS.MIME.Text_HTML,
-         Message_Body => "HELLO!");
-   end Callback;
+      Put_Line ("* check actual server configuration");
+      Actual_Config := AWS.Server.Config (Web_Server);
 
-   begin
-      AWS.Server.Set_Security (Web_Server => Web_Server,
-                               Certificate_Filename => "./zed.pem");
-      AWS.Server.Start (Web_Server => Web_Server,
-                        Name       => Server_Name (Server_Config),
-                        Callback   => Callback'Unrestricted_Access,
-                        Port       => Server_Port (Server_Config),
-                        Session    => True,
-                        Security   => True);
-   end Perform_HardCoded_Start;
+      Put_Line (". Server name: " & Server_Name (Actual_Config));
+      Put_Line (". Server host: " & Server_Host (Actual_Config));
+      Put_Line (". Server port: " & Natural'Image(Server_Port (Actual_Config)));
 
+      if not Security (Actual_Config) then
+         Put_Line ("x Server is not secured!");
+         return False;
+      end if;
+      Put_Line (". Server is secured");
+
+      if not Exchange_Certificate (Actual_Config) then
+         Put_Line ("x Server has no Exchange_Certificate option!");
+         return False;
+      end if;
+      Put_Line (". Server has Exchange_Certificate option.");
+
+      if not Certificate_Required (Actual_Config) then
+         Put_Line ("x Server has no Certificate_Required option");
+         return False;
+      end if;
+      Put_Line (". Server has Certificate_Required option");
+
+      if not Session (Actual_Config) then
+         Put_Line ("x Server is not session aware!");
+         return False;
+      end if;
+      Put_Line (". Server with session support");
+
+      if not Session (Actual_Config) then
+         Put_Line ("x Server is not session aware!");
+         return False;
+      end if;
+      Put_Line (". Server with session support");
+
+      Put_Line (". Config was verified");
+      return True;
+   end Check_Config;
 
 
 begin
-   Put_Line ("server starting ...");
 
---     Perform_HardCoded_Start;
-   Perform_Good_Start;
-   Show_Config;
-
-   Put_Line ("server started. perss <q> to quit ...");
-
-   AWS.Server.Wait (AWS.Server.Q_Key_Pressed);
-   Put_Line ("server shutting down...");
+   AWS.Log.Start (Main_Log.Log,
+                  Split => AWS.Log.Each_Run,
+                 Filename_Prefix => "main_log");
+   Prepare_SSL;
+   Start_Server;
+   if Check_Config then
+      Put_Line ("* server started. perss <q> to quit ...");
+      AWS.Server.Wait (AWS.Server.Q_Key_Pressed);
+      Put_Line ("* server shutting down...");
+   end if;
    AWS.Server.Shutdown (Web_Server);
-   Put_Line ("server stopped.");
-end Zed;
+   Put_Line ("* server stopped.");
+   AWS.Log.Stop (Main_Log.Log);
+
+   end Zed;

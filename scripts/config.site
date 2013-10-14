@@ -5,9 +5,9 @@ p_ST="Chelyabinskaya obl."
 p_L="Chelyabinsk"
 p_O="ZeroOrg"
 p_RootOU="Main CA"
-p_RootFDQN="localhost"
+p_RootFDQN="localdomain"
 p_SrvOU="Private Server"
-p_SrvFDQN="localhost"
+p_SrvFDQN="zed.localdomain"
 
 cli_pass="pass:12345"
 

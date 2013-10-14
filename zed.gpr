@@ -2,18 +2,21 @@ with "aws";
 
 project Zed is
 
+   type Library_Kind is
+      ("relocatable", "static");
+   type Ssl_Library_Kind is
+      ("relocatable", "static");
    for Languages use ("Ada");
+   for Object_Dir use "build";
+   for Exec_Dir use "output";
+   for Main use ("zed.adb");
+   SSL_LIBRARY_TYPE : Ssl_Library_Kind := external ("SSL_LIBRARY_TYPE");
+   LIBRARY_TYPE : Library_Kind := external ("LIBRARY_TYPE");
 
    package Ide is
       for Vcs_Kind use "Git";
       for Documentation_Dir use "docs";
    end Ide;
-
-   for Source_Dirs use ("./src/**");
-   for Object_Dir use "build";
-   for Exec_Dir use "output";
-
-   for Main use ("zed.adb");
 
    package Naming is
       for Casing use "lowercase";
@@ -28,15 +31,65 @@ project Zed is
    end Builder;
 
    package Compiler is
-      for Default_Switches ("ada") use ("-gnato", "-fstack-check", "-gnata", "-g", "-gnat05");
+
+      case SSL_LIBRARY_TYPE is
+
+         when "relocatable" =>
+            for Default_Switches ("ada") use ("-gnato", "-fstack-check", "-gnata", "-g", "-gnat05");
+
+         when "static" =>
+
+            case LIBRARY_TYPE is
+
+               when "relocatable" =>
+                  for Default_Switches ("ada") use ("-gnato", "-fstack-check", "-gnata", "-g", "-gnat05");
+
+               when "static" =>
+                  for Default_Switches ("ada") use ("-gnato", "-fstack-check", "-gnata", "-g", "-gnat05", "-fcallgraph-info=su,da");
+            end case;
+      end case;
    end Compiler;
 
    package Binder is
-      for Default_Switches ("ada") use ("-E", "-r", "-shared");
+
+      case SSL_LIBRARY_TYPE is
+
+         when "relocatable" =>
+            for Default_Switches ("ada") use ("-E", "-r", "-shared");
+
+         when "static" =>
+
+            case LIBRARY_TYPE is
+
+               when "relocatable" =>
+                  for Default_Switches ("ada") use ("-E", "-r", "-shared");
+
+               when "static" =>
+                  for Default_Switches ("ada") use ("-E", "-r", "-static");
+            end case;
+      end case;
    end Binder;
 
    package Linker is
       for Default_Switches ("ada") use ("-g");
    end Linker;
 
+   case SSL_LIBRARY_TYPE is
+
+      when "relocatable" =>
+         for Source_Dirs use ("./src/**");
+
+      when "static" =>
+
+         case LIBRARY_TYPE is
+
+            when "relocatable" =>
+               for Source_Dirs use ("./src/**");
+
+            when "static" =>
+               for Source_Dirs use ("src/**");
+         end case;
+   end case;
+
 end Zed;
+

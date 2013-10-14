@@ -5,7 +5,7 @@ set -x
 
 . config
 
-test $k && rm -rf $k
+# test $k && rm -rf $k
 mkdir -p $k
 
 # генерим главный сертификат

@@ -2,6 +2,7 @@ with AWS.Messages;
 with AWS.MIME;
 with AWS.Response;
 with AWS.Status;
+with AWS.Templates;
 
 package body Page_Login is
 

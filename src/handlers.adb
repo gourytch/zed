@@ -1,5 +1,6 @@
 with Page_Login;
 with Page_Not_Found;
+with Resource_Handler;
 
 package body Handlers is
 
@@ -10,6 +11,11 @@ package body Handlers is
 
    begin
       Dispatcher.Register_Default_Callback (Action => Page_Not_Found.Callback);
+
+      Dispatcher.Register_Regexp
+        (URI => "^" & Resource_Handler.Resources_Prefix & ".*$",
+         Action => Page_Login.Callback);
+
       Dispatcher.Register (URI    => "/login",
                            Action => Page_Login.Callback);
 
