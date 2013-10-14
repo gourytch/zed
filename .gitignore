@@ -1,0 +1,7 @@
+scripts/.srl
+build/*
+output/*
+keys/*
+logs/*
+src/resources/*
+
